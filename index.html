@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Simple Bouncing Ball</title>
+    <style>
+        html, body { height: 100%; margin: 0; background: #111; display:flex; align-items:center; justify-content:center; }
+        canvas { background:#222; box-shadow: 0 6px 20px rgba(0,0,0,0.6); border-radius:8px; touch-action: none; }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+
+        function fitCanvas() {
+            const margin = 40;
+            const w = Math.max(200, window.innerWidth - margin);
+            const h = Math.max(200, window.innerHeight - margin);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            canvas.width = Math.floor(w * dpr);
+            canvas.height = Math.floor(h * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', fitCanvas);
+        fitCanvas();
+
+        // Ball state
+        const ball = {
+            x: 120, y: 80, r: 28,
+            vx: 220, vy: 0,
+            color: '#ff6b6b'
+        };
+
+        const gravity = 1200;    // px / s^2
+        const bounce = 0.78;     // energy retention on bounce
+        let last = performance.now();
+
+        function update(dt) {
+            ball.vy += gravity * dt;
+            ball.x += ball.vx * dt;
+            ball.y += ball.vy * dt;
+
+            const W = parseFloat(canvas.style.width);
+            const H = parseFloat(canvas.style.height);
+
+            // left/right
+            if (ball.x - ball.r < 0) {
+                ball.x = ball.r;
+                ball.vx = -ball.vx * bounce;
+            } else if (ball.x + ball.r > W) {
+                ball.x = W - ball.r;
+                ball.vx = -ball.vx * bounce;
+            }
+
+            // top/bottom
+            if (ball.y - ball.r < 0) {
+                ball.y = ball.r;
+                ball.vy = -ball.vy * bounce;
+            } else if (ball.y + ball.r > H) {
+                ball.y = H - ball.r;
+                ball.vy = -ball.vy * bounce;
+                if (Math.abs(ball.vy) < 40) ball.vy = 0; // eliminate tiny jitter
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // shadow
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.ellipse(ball.x + 8, Math.min(ball.y + ball.r + 8, parseFloat(canvas.style.height) - 6), ball.r * 0.9, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ball
+            ctx.beginPath();
+            ctx.fillStyle = ball.color;
+            ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // highlight
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.arc(ball.x - ball.r * 0.35, ball.y - ball.r * 0.45, ball.r * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function loop(now) {
+            const dt = Math.min((now - last) / 1000, 0.05);
+            last = now;
+            update(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+
+        // Interactivity: click/tap to push the ball toward the pointer
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            ball.vx += (px - ball.x) * 3;
+            ball.vy += (py - ball.y) * 3;
+        });
+    </script>
+</body>
+</html>
